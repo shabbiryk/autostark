@@ -214,7 +214,7 @@ mod Task {
                 self.alloed_token_address.read(), get_caller_address()
             );
             assert(user_balance >= user_total_spend_gas_inc, 'INSUFFICIENT_BALANCE_TO_SPEND');
-            // make approve to us change later to contract owner after converting to threads(task)
+            //WIP make approve to us change later to contract owner after converting to threads(task)
             approve_us_for_spend(
                 get_contract_address(), self.alloed_token_address.read(), user_total_spend_gas_inc
             );
