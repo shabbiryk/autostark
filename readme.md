@@ -1,10 +1,13 @@
-Only Scarb is used. To run locally install Scarb
+#### Local Setup
 
-#### Almost Done ?
+- Install Scarb [Scarb Install](https://docs.swmansion.com/scarb/download)
 
-Only owner can create task. Task (i.e. externall calls or any external contract interactions). For what kind of data see (src/types.cairo) call struct. Unlike only owner can create a task, everybody can call the execute(of already queued task).
+#### Done
 
-#### Todo Now?
+- Task creation and execution
+  - Only owner can create a task and put it in the queue and any body can call the execute function to execute the already queued task. Only owner can cancel the task. Implementation: task.cairo for task(create, read, cancel) and types.cairo for external sys calls
+
+#### Todo
 
 1. Replacing the relayers(mostly centralized,off-chain computation). What relayers do? In our case, they capture our transaction without chargin any fees(most times) and save them (no immediate execution) in their own off-chain set of networks and when our predefined rules gets fullfilled they submit our transaction or desired behaviour.
 
