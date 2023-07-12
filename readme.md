@@ -27,7 +27,7 @@ Task execution part is open to all, any one can call this function with exact se
 - Could move the `transferFrom` execution to separate function which can be called by only us(contract owner) just before time of exe
 - **Help** Had mentioned in comments with todo and WIP. One real pain is to have a work around for `felt252` to `bool` (mentioned in queue and execute function, task.cairo)
 - **Help** Calculating the gas fees. How to get gasLimit and maxGasLimit(like in ethereum), in starknet. Needs this functionality to speculate how much gas would be required in the future for txn
-- Introduce mapping of id to struct with single user as owner unlike currently where deployer is owner.(I would do it)
+- Introduce mapping of id to struct with single user as owner unlike currently where deployer is owner.(done)
 - Deploy to testnet
 
 #### Application (Front end and other)
