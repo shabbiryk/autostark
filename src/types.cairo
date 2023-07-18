@@ -31,6 +31,22 @@ impl CallTraitImpl of CallTrait {
         pedersen(pedersen((*self.address).into(), *self.entry_point_selector), data_hash)
     }
 
+    fn metadata(self: @Call) -> felt252 {
+        let mut total_amount = 0;
+        let mut call_data_span = self.calldata.span();
+        loop {
+            match call_data_span.pop_front() {
+                Option::Some(amount) => {
+                    total_amount = *amount;
+                },
+                Option::None(_) => {
+                    break;
+                }
+            };
+        };
+        total_amount
+    }
+
     fn execute(self: @Call) -> Span<felt252> {
         let result = call_contract_syscall(
             *self.address, *self.entry_point_selector, self.calldata.span()
