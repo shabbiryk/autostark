@@ -55,9 +55,6 @@ trait ITask<TStorage> {
     // Return the execution window, i.e. the start and end timestamp in which the call can be executed
     fn get_execution_window(self: @TStorage, id: felt252) -> (u64, u64);
 
-    // Get the contract owner
-    fn get_owner(self: @TStorage) -> ContractAddress;
-
     //Get task owner
     fn get_task_owner(self: @TStorage, id: felt252) -> ContractAddress;
 }
@@ -71,7 +68,9 @@ mod Task {
     use array::{ArrayTrait, SpanTrait};
     use option::{OptionTrait};
     use hash::LegacyHash;
-    use starknet::{get_caller_address, get_block_timestamp, get_contract_address};
+    use starknet::{
+        get_caller_address, get_block_timestamp, get_contract_address, contract_address_const
+    };
     use zeroable::{Zeroable};
     use traits::{Into};
     use result::{ResultTrait};
@@ -94,7 +93,6 @@ mod Task {
 
     #[storage]
     struct Storage {
-        owner: ContractAddress,
         alloed_token_address: ContractAddress,
         id_to_user_details: LegacyMap<felt252, UserTaskDetails>,
         id_to_post_task_details: LegacyMap<felt252, UserPostTaskDetails>
@@ -111,10 +109,7 @@ mod Task {
     }
 
     #[constructor]
-    fn constructor(
-        ref self: ContractState, owner: ContractAddress, alloed_token_address: ContractAddress, 
-    ) {
-        self.owner.write(owner);
+    fn constructor(ref self: ContractState, alloed_token_address: ContractAddress, ) {
         self.alloed_token_address.write(alloed_token_address);
     }
 
@@ -151,7 +146,7 @@ mod Task {
 
     fn get_current_max_gas_fees() -> u256 {
         // todo: how to get the current gas fees, inside contract, corelib:TXInfo?
-        1
+        0
     }
 
 
@@ -168,7 +163,7 @@ mod Task {
             contract_address: token_contract
         }.balance_of(call);
         let final_balance: UserBalance = Serde::<UserBalance>::deserialize(ref current_balance)
-            .unwrap(); // this kind of deserialize should work?
+            .unwrap();
         final_balance.balance
     }
 
@@ -209,17 +204,18 @@ mod Task {
             calldata: calldata
         };
         let mut result = IERC20Dispatcher { contract_address: token_contract }.transfer_from(call);
-        let destrt_result: SuccessFelt = Serde::<SuccessFelt>::deserialize(ref result)
-            .unwrap(); // this kind of deserialize should work?
+        let destrt_result: SuccessFelt = Serde::<SuccessFelt>::deserialize(ref result).unwrap();
         destrt_result.success
+    }
+
+    fn convert_bool_str_to_felt() -> felt252 {
+        let success_bool = 'true';
+        let sucess_felt252: felt252 = success_bool.into();
+        sucess_felt252
     }
 
     #[generate_trait]
     impl TaskInternal of TaskInternalTrait {
-        fn check_if_owner(self: @ContractState) {
-            assert(get_caller_address() == self.owner.read(), 'OWNER_CAN_CALL');
-        }
-
         fn check_if_task_owner_call(self: @ContractState, id: felt252) {
             assert(
                 get_caller_address() == self.id_to_user_details.read(id).user_address,
@@ -235,24 +231,30 @@ mod Task {
             task_time_detail: TaskTimeDetails,
             input_user_spend: u256
         ) -> felt252 {
-            self.check_if_owner();
             let id = to_id(@calls);
+
             assert(
                 self.id_to_user_details.read(id).execution_started.is_zero(), 'ALREADY_IN_QUEUE'
             );
+
             // todo get the total spending, current gas
             let user_spend_total: u256 = generate_total_user_spend(@calls).into();
             let user_total_spend_gas_inc = user_spend_total + get_current_max_gas_fees();
+
             assert(user_total_spend_gas_inc == input_user_spend, 'USER_SPEND_AMOUNT_INVALID');
+
             let user_balance = get_balance_of(
                 self.alloed_token_address.read(), get_caller_address()
             );
+
             assert(user_balance >= user_total_spend_gas_inc, 'INSUFFICIENT_BALANCE_TO_SPEND');
-            //WIP make approve to us change later to contract owner after converting to threads(task)
-            approve_us_for_spend(
+
+            let return_felt = approve_us_for_spend(
                 get_contract_address(), self.alloed_token_address.read(), user_total_spend_gas_inc
             );
-            // if this above approve... call passes i.e true then only forward. WIP currently due to reutrn type of felt
+
+            assert(return_felt == convert_bool_str_to_felt(), 'ERC20 APPROVE FAIL');
+
             self
                 .id_to_user_details
                 .write(
@@ -270,20 +272,26 @@ mod Task {
 
         fn execute(ref self: ContractState, calls: Array<Call>) -> Array<Span<felt252>> {
             let id = to_id(@calls);
+
             assert(self.id_to_post_task_details.read(id).executed.is_zero(), 'ALREADY_STARTED');
+
             let (earliest, latest) = self.get_execution_window(id);
             let current_time = get_block_timestamp();
+
             assert(current_time >= earliest, 'EARLY');
             assert(current_time < latest, 'LATE');
-            // WIP currently due to return type felt
-            transfer_from_to_us(
+
+            let return_felt = transfer_from_to_us(
                 self.alloed_token_address.read(),
                 self.id_to_user_details.read(id).user_address,
                 get_contract_address(),
                 self.id_to_user_details.read(id).pre_user_spend
             );
-            // if this transferFrom passes then only move forward
+
+            assert(return_felt == convert_bool_str_to_felt(), 'ERC20 TRANSFER FAIL');
+
             self.id_to_post_task_details.write(id, UserPostTaskDetails { executed: current_time });
+
             let mut results: Array<Span<felt252>> = ArrayTrait::new();
             let mut call_span = calls.span();
             loop {
@@ -301,7 +309,9 @@ mod Task {
 
         fn get_execution_window(self: @ContractState, id: felt252) -> (u64, u64) {
             let start_time = self.id_to_user_details.read(id).execution_started;
+
             assert(start_time.is_non_zero(), 'Does Not exits');
+
             let (delay, window) = (
                 self.id_to_user_details.read(id).delay, self.id_to_user_details.read(id).window
             );
@@ -312,8 +322,10 @@ mod Task {
 
         fn cancel(ref self: ContractState, id: felt252) {
             self.check_if_task_owner_call(id);
+
             assert(self.id_to_user_details.read(id).execution_started.is_non_zero(), 'NOT EXIST');
             assert(self.id_to_post_task_details.read(id).executed.is_zero(), 'ALREADY_EXECUTED');
+
             self
                 .id_to_user_details
                 .write(
@@ -323,14 +335,11 @@ mod Task {
                         window: 0,
                         delay: 0,
                         pre_user_spend: 0,
-                        user_address: get_caller_address(),
+                        user_address: contract_address_const::<0>(),
                     }
                 )
         }
 
-        fn get_owner(self: @ContractState) -> ContractAddress {
-            self.owner.read()
-        }
 
         fn get_task_owner(self: @ContractState, id: felt252) -> ContractAddress {
             self.id_to_user_details.read(id).user_address
