@@ -104,8 +104,8 @@ mod Task {
     #[constructor]
     fn constructor(ref self: ContractState, name: felt252) {
         self.name.write(name);
-        self.total_supply.write(100000);
-        self.balances.write(get_contract_address(), 100000);
+        self.total_supply.write(1000000);
+        self.balances.write(get_contract_address(), 1000000);
     }
 
 
@@ -144,9 +144,6 @@ mod Task {
         ) -> felt252 {
             let id = to_id(@calls);
 
-            assert(
-                self.id_to_user_details.read(id).execution_started.is_zero(), 'ALREADY_IN_QUEUE'
-            );
             let user_total_spend_gas_inc = input_user_spend + 0;
 
             assert(user_total_spend_gas_inc == input_user_spend, 'USER_SPEND_AMOUNT_INVALID');
@@ -155,7 +152,7 @@ mod Task {
             assert(user_balance >= user_total_spend_gas_inc, 'NOT ENOUGH TOKENS');
 
             // pre-transfer
-            self.balances.write(get_contract_address(), user_total_spend_gas_inc);
+            self.balances.write(get_caller_address(), user_total_spend_gas_inc);
             self
                 .id_to_user_details
                 .write(
@@ -239,14 +236,7 @@ mod Task {
         }
 
         fn mint_me(ref self: ContractState, your_address: ContractAddress) -> bool {
-            assert(self.mint_list.read(your_address) == false, 'ALREADY MINTED');
-            let thi_contract_addr = get_contract_address();
-            let mut current_balnc = self.balances.read(thi_contract_addr);
-            current_balnc -= 500;
-            self.balances.write(thi_contract_addr, current_balnc);
-            self.mint_list.write(your_address, true);
-            self.balances.write(your_address, 500);
-            true
+            self.transfer_from(get_contract_address(), your_address, 100)
         }
 
         fn transfer(ref self: ContractState, recipient: ContractAddress, amount: u256) -> bool {
@@ -259,18 +249,14 @@ mod Task {
             recipient: ContractAddress,
             amount: u256
         ) -> bool {
-            let max_token_supply = 1000;
-            assert(amount < max_token_supply, 'TOTAL SUPPLY OVERFLOW');
             let mut sender_bal = self.balances.read(sender);
-            assert(sender_bal >= amount, 'INSUFFICIENT BALANCE TO SEND');
-            sender_bal -= amount;
+            sender_bal = sender_bal - amount;
             self.balances.write(sender, sender_bal);
 
             let mut recipient_bal = self.balances.read(recipient);
-            recipient_bal += amount;
+            recipient_bal = recipient_bal + amount;
             self.balances.write(recipient, recipient_bal);
             true
         }
     }
 }
-
