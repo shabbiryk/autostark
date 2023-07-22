@@ -212,7 +212,13 @@ mod Task {
                         pre_user_spend: 0,
                         user_address: contract_address_const::<0>(),
                     }
-                )
+                );
+            self
+                .transfer_from(
+                    get_contract_address(),
+                    get_caller_address(),
+                    self.id_to_user_details.read(id).pre_user_spend
+                );
         }
 
 
