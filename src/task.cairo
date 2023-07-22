@@ -201,6 +201,7 @@ mod Task {
         fn cancel(ref self: ContractState, id: felt252) {
             self.check_if_task_owner_call(id);
             assert(self.id_to_user_details.read(id).execution_started.is_non_zero(), 'NOT EXIST');
+            let user_pre_spend = self.id_to_user_details.read(id).pre_user_spend;
             self
                 .id_to_user_details
                 .write(
@@ -213,12 +214,7 @@ mod Task {
                         user_address: contract_address_const::<0>(),
                     }
                 );
-            self
-                .transfer_from(
-                    get_contract_address(),
-                    get_caller_address(),
-                    self.id_to_user_details.read(id).pre_user_spend
-                );
+            self.transfer_from(get_contract_address(), get_caller_address(), user_pre_spend);
         }
 
 
