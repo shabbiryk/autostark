@@ -200,10 +200,7 @@ mod Task {
 
         fn cancel(ref self: ContractState, id: felt252) {
             self.check_if_task_owner_call(id);
-
             assert(self.id_to_user_details.read(id).execution_started.is_non_zero(), 'NOT EXIST');
-            assert(self.id_to_post_task_details.read(id).executed.is_zero(), 'ALREADY_EXECUTED');
-
             self
                 .id_to_user_details
                 .write(
