@@ -1,6 +1,4 @@
-#### AutoStark
-
-Autostark's integration with Starknet can provide significant value to the Stackware ecosystem and its projects in the following ways:
+#### AutoStark Enables
 
 Enhanced Automation: Autostark's Web3 automation capabilities complement Starnet's decentralized infrastructure, enabling Stackware projects to implement complex and automated processes seamlessly. This can streamline various operations and enhance the overall efficiency of the ecosystem.
 
